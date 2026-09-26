@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rank Ceremony — {{ config.portal_title }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.jpg') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Manrope:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --gold: #f5c451; --gold-soft: #ffe6a6; --gold-deep: #c98a12; --maroon: #3a0000; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--maroon); font-family: "Manrope", system-ui, sans-serif; color: #fff; -webkit-user-select: none; user-select: none; }
+
+    .stage {
+      position: fixed; inset: 0; cursor: pointer;
+      background: var(--maroon) url("{{ url_for('static', filename='rank/bg.png') }}") center / cover no-repeat;
+    }
+    #confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+
+    .content { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 4vh 4vw 11vh; }
+    .view { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2.4vh; width: 100%; animation: viewIn 0.6s ease both; }
+    @keyframes viewIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+    .gold {
+      background: linear-gradient(180deg, #fff3c4 0%, var(--gold) 45%, var(--gold-deep) 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 3px 10px rgba(50, 0, 0, 0.7));
+    }
+    .serif { font-family: "Cinzel", Georgia, "Times New Roman", serif; }
+
+    /* ---- intro / finale ---- */
+    .trophy { font-size: clamp(3rem, 14vh, 8rem); filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5)); animation: bob 3s ease-in-out infinite; }
+    @keyframes bob { 50% { transform: translateY(-1.4vh); } }
+    .title { font-weight: 900; font-size: clamp(1.5rem, min(9vh, 8.5vw), 6rem); letter-spacing: 0.06em; overflow-wrap: anywhere; text-transform: uppercase; line-height: 1.1; margin: 0; max-width: 92vw; }
+    .tagline { font-size: clamp(0.9rem, 2.6vh, 1.5rem); color: var(--gold-soft); letter-spacing: 0.16em; text-transform: uppercase; text-shadow: 0 2px 12px rgba(40, 0, 0, 0.8); margin: 0; max-width: 90vw; }
+    .begin { margin-top: 3vh; font-size: clamp(0.9rem, 2.4vh, 1.3rem); letter-spacing: 0.2em; text-transform: uppercase; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); animation: blinkSoft 1.6s ease-in-out infinite; }
+    @keyframes blinkSoft { 50% { opacity: 0.35; } }
+
+    /* ---- rank slide ---- */
+    .rank-label { font-weight: 900; font-size: clamp(1.5rem, min(7.5vh, 9vw), 5rem); letter-spacing: 0.12em; text-transform: uppercase; min-height: 1.15em; margin: 0; white-space: nowrap; }
+    .caret { display: inline-block; width: 0.07em; height: 0.85em; margin-left: 0.1em; background: var(--gold-soft); vertical-align: -0.06em; animation: caret 0.9s steps(1) infinite; box-shadow: 0 0 10px rgba(255, 230, 166, 0.8); }
+    @keyframes caret { 50% { opacity: 0; } }
+    .revealed .caret { display: none; }
+
+    .photo-wrap { --pd: min(38vh, 68vw, 360px); position: relative; width: var(--pd); height: var(--pd); }
+    .flip { width: 100%; height: 100%; perspective: 1400px; }
+    .flip-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 1.15s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .revealed .flip-inner { transform: rotateY(180deg); }
+    .face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+    .front {
+      background: radial-gradient(circle at 30% 25%, #8d1010, #2a0000 75%);
+      border: 0.55vh solid rgba(245, 196, 81, 0.8);
+      box-shadow: 0 0 0 0.9vh rgba(245, 196, 81, 0.14), 0 22px 60px rgba(0, 0, 0, 0.55), inset 0 0 40px rgba(0, 0, 0, 0.5);
+      display: grid; place-items: center;
+    }
+    .q { font-size: calc(var(--pd) * 0.52); font-weight: 900; animation: pulseQ 1.8s ease-in-out infinite; }
+    @keyframes pulseQ { 50% { transform: scale(1.07); opacity: 0.85; } }
+    .back {
+      transform: rotateY(180deg);
+      border: 0.75vh solid var(--gold);
+      background: #4a0808;
+      box-shadow: 0 0 0 0.9vh rgba(245, 196, 81, 0.25), 0 0 70px rgba(245, 196, 81, 0.55), 0 22px 60px rgba(0, 0, 0, 0.55);
+      display: grid; place-items: center;
+    }
+    .back img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; display: block; }
+    .initials { font-weight: 900; font-size: calc(var(--pd) * 0.36); letter-spacing: 0.04em; }
+
+    .badge {
+      position: absolute; right: -4%; bottom: -1%; width: calc(var(--pd) * 0.34); aspect-ratio: 1; border-radius: 50%;
+      display: grid; place-items: center; color: #5a0505; font-weight: 900; font-size: calc(var(--pd) * 0.135); line-height: 1;
+      background: radial-gradient(circle at 30% 25%, #fff8dc, var(--gold) 55%, #b97a0a);
+      border: 0.5vh solid #fff3c4; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+      transform: scale(0) rotate(-40deg); transition: transform 0.7s cubic-bezier(0.3, 1.6, 0.5, 1) 0.95s;
+    }
+    .badge small { font-size: 0.5em; vertical-align: 0.5em; margin-left: 0.04em; }
+    .revealed .badge { transform: scale(1) rotate(0); }
+
+    .info { display: grid; justify-items: center; min-height: 12vh; width: 100%; }
+    .info > * { grid-area: 1 / 1; }
+    .who { display: flex; flex-direction: column; align-items: center; gap: 1vh; opacity: 0; transform: translateY(22px) scale(0.96); transition: opacity 0.9s ease 0.75s, transform 0.9s ease 0.75s; }
+    .revealed .who { opacity: 1; transform: none; }
+    .name { font-weight: 900; font-size: clamp(1.6rem, 6.2vh, 4.2rem); letter-spacing: 0.06em; line-height: 1.1; max-width: 92vw; text-shadow: 0 4px 22px rgba(40, 0, 0, 0.85); overflow-wrap: anywhere; }
+    .sub { font-size: clamp(0.85rem, 2.4vh, 1.5rem); color: var(--gold-soft); letter-spacing: 0.18em; text-transform: uppercase; text-shadow: 0 2px 10px rgba(40, 0, 0, 0.85); }
+    .hint { align-self: start; font-size: clamp(0.8rem, 2.2vh, 1.2rem); letter-spacing: 0.24em; text-transform: uppercase; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); animation: blinkSoft 1.6s ease-in-out infinite; transition: opacity 0.3s; }
+    .revealed .hint { opacity: 0; animation: none; }
+
+    /* ---- finale ---- */
+    .podium { display: flex; align-items: flex-end; justify-content: center; gap: clamp(14px, 4vw, 56px); flex-wrap: wrap; }
+    .pod { --pd: min(22vh, 26vw, 220px); display: flex; flex-direction: column; align-items: center; gap: 1vh; max-width: 28vw; min-width: 120px; }
+    .pod.first { --pd: min(29vh, 34vw, 290px); }
+    .pod .photo-wrap { --pd: inherit; }
+    .pod .disc { position: relative; width: var(--pd); height: var(--pd); }
+    .pod .disc .ring { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 0.7vh solid var(--gold); background: #4a0808; box-shadow: 0 0 50px rgba(245, 196, 81, 0.5), 0 16px 40px rgba(0, 0, 0, 0.5); display: grid; place-items: center; }
+    .pod .disc .ring img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; }
+    .pod .disc .badge { transform: none; transition: none; }
+    .pod .pname { font-weight: 900; font-size: clamp(0.95rem, 3vh, 2rem); letter-spacing: 0.05em; text-shadow: 0 3px 14px rgba(40, 0, 0, 0.85); overflow-wrap: anywhere; text-align: center; }
+    .pod .psub { font-size: clamp(0.7rem, 1.8vh, 1.1rem); color: var(--gold-soft); letter-spacing: 0.14em; text-transform: uppercase; text-shadow: 0 2px 8px rgba(40, 0, 0, 0.85); text-align: center; }
+
+    /* ---- controls ---- */
+    .hud { position: fixed; left: 0; right: 0; bottom: 2.6vh; display: flex; align-items: center; justify-content: center; gap: 12px; z-index: 10; transition: opacity 0.5s; }
+    .hud.hide { opacity: 0; pointer-events: none; }
+    .pill, .round {
+      font: 700 0.85rem "Manrope", system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-soft);
+      background: rgba(30, 0, 0, 0.55); border: 1px solid rgba(245, 196, 81, 0.55); backdrop-filter: blur(6px); cursor: pointer; transition: background 0.2s, transform 0.15s;
+    }
+    .pill { padding: 12px 20px; border-radius: 999px; }
+    .pill.primary { background: linear-gradient(100deg, #f5c451, #ffe6a6); color: #4a0808; border-color: #fff3c4; }
+    .pill:hover, .round:hover { background: rgba(80, 0, 0, 0.75); transform: translateY(-1px); }
+    .pill.primary:hover { background: linear-gradient(100deg, #ffd56b, #fff3c4); }
+    .pill[disabled] { opacity: 0.35; pointer-events: none; }
+    .dots { display: flex; gap: 6px; }
+    .dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.28); }
+    .dots i.on { background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+    .tools { position: fixed; top: 14px; right: 14px; display: flex; gap: 8px; z-index: 10; transition: opacity 0.5s; }
+    .tools.hide { opacity: 0; pointer-events: none; }
+    .round { width: 42px; height: 42px; border-radius: 50%; font-size: 1.05rem; padding: 0; letter-spacing: 0; display: grid; place-items: center; text-decoration: none; }
+
+    .toast { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 20; max-width: min(92vw, 640px); padding: 12px 18px; border-radius: 14px; background: rgba(20, 0, 0, 0.85); border: 1px solid var(--gold); color: #fff; font-size: 0.9rem; line-height: 1.4; text-align: center; }
+    .empty a { color: var(--gold-soft); }
+
+    @media (max-width: 640px) {
+      .pill { padding: 11px 15px; font-size: 0.75rem; }
+      .dots { display: none; }
+      .rank-label { letter-spacing: 0.08em; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .flip-inner, .badge, .who { transition-duration: 0.01s; transition-delay: 0s; }
+      .view, .trophy, .q, .begin, .hint { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <canvas id="confetti"></canvas>
+    <div class="content" id="content"></div>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <div class="tools" id="tools">
+    <button class="round" id="muteBtn" title="Mute / unmute (M)" aria-label="Mute or unmute">🔊</button>
+    <button class="round" id="fsBtn" title="Fullscreen (F)" aria-label="Fullscreen">⛶</button>
+    <a class="round" href="/rank/admin" title="Rank setup" aria-label="Rank setup">⚙</a>
+  </div>
+
+  <div class="hud" id="hud">
+    <button class="pill" id="backBtn">◀ Back</button>
+    <div class="dots" id="dots"></div>
+    <button class="pill primary" id="nextBtn">Begin ▶</button>
+  </div>
+
+  <script>
+  (function () {
+    var SUSPENSE_URL = "{{ url_for('static', filename='rank/suspense.mp3') }}";
+    var FANFARE_URL = "{{ url_for('static', filename='rank/fanfare.mp3') }}";
+    var LABELS = { 1: "First rank", 2: "Second rank", 3: "Third rank" };
+    var SUFFIX = { 1: "st", 2: "nd", 3: "rd" };
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    var $ = function (id) { return document.getElementById(id); };
+    var content = $("content"), stage = $("stage"), hud = $("hud"), tools = $("tools");
+    var nextBtn = $("nextBtn"), backBtn = $("backBtn"), dotsEl = $("dots");
+
+    var cfg = null, steps = [], idx = 0, view = null, typing = null, lastNav = 0;
+
+    /* ---------------- audio ---------------- */
+    var suspense = new Audio(SUSPENSE_URL); suspense.loop = true; suspense.preload = "auto"; suspense.volume = 0;
+    var fanfare = new Audio(FANFARE_URL); fanfare.preload = "auto"; fanfare.volume = 1;
+    var muted = false, wantSuspense = false;
+    var toastTimer = null;
+    function toast(msg, ms) {
+      var el = $("toast"); el.textContent = msg; el.hidden = false;
+      clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, ms || 6000);
+    }
+    suspense.addEventListener("error", function () { toast("Music file could not be loaded: " + SUSPENSE_URL + " — check that the static/rank folder was uploaded.", 10000); });
+    fanfare.addEventListener("error", function () { toast("Fanfare file could not be loaded: " + FANFARE_URL + " — check that the static/rank folder was uploaded.", 10000); });
+    $("muteBtn").textContent = "🔊";
+
+    function fade(audio, to, ms, done) {
+      clearInterval(audio._fade);
+      var from = audio.volume, n = Math.max(1, Math.round(ms / 40)), i = 0;
+      audio._fade = setInterval(function () {
+        i++;
+        audio.volume = Math.min(1, Math.max(0, from + (to - from) * i / n));
+        if (i >= n) { clearInterval(audio._fade); if (done) done(); }
+      }, 40);
+    }
+    function safePlay(audio) {
+      var p = audio.play();
+      if (p && p.catch) p.catch(function (err) {
+        if (err && err.name === "NotAllowedError") toast("Your browser blocked the sound. Click the 🔊 button or press Next again.", 8000);
+        else if (err && err.name !== "AbortError") toast("Sound could not start (" + (err.name || "error") + ").", 8000);
+      });
+    }
+    function startSuspense() {
+      wantSuspense = true;
+      if (muted) toast("Sound is muted — press M or click 🔇 to unmute.", 5000);
+      if (suspense.paused) { suspense.currentTime = 0; suspense.volume = 0; safePlay(suspense); }
+      fade(suspense, 0.85, 900);
+    }
+    function stopSuspense(ms) { wantSuspense = false; fade(suspense, 0, ms || 500, function () { suspense.pause(); }); }
+    function stopFanfare() { fade(fanfare, 0, 250, function () { fanfare.pause(); fanfare.currentTime = 0; fanfare.volume = 1; }); }
+    function playFanfare() { clearInterval(fanfare._fade); fanfare.pause(); fanfare.currentTime = 0; fanfare.volume = 1; safePlay(fanfare); }
+
+    /* ---------------- confetti ---------------- */
+    var cv = $("confetti"), cx = cv.getContext("2d"), bits = [], raf = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    function sizeCanvas() { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; }
+    sizeCanvas(); addEventListener("resize", sizeCanvas);
+    var COLORS = ["#f5c451", "#ffe6a6", "#ffffff", "#ff5a5a", "#c98a12", "#ffd56b"];
+    function burst() {
+      if (reduceMotion) return;
+      var W = cv.width, H = cv.height, i, side;
+      for (side = 0; side < 2; side++) {
+        for (i = 0; i < 90; i++) {
+          bits.push({ x: side ? W : 0, y: H * 0.78, vx: (side ? -1 : 1) * (4 + Math.random() * 10) * dpr, vy: -(9 + Math.random() * 14) * dpr,
+            w: (6 + Math.random() * 8) * dpr, h: (3 + Math.random() * 6) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, c: COLORS[(Math.random() * COLORS.length) | 0] });
+        }
+      }
+      for (i = 0; i < 140; i++) {
+        bits.push({ x: Math.random() * W, y: -Math.random() * H * 0.5, vx: (Math.random() - 0.5) * 3 * dpr, vy: (1 + Math.random() * 3) * dpr,
+          w: (5 + Math.random() * 7) * dpr, h: (3 + Math.random() * 5) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, c: COLORS[(Math.random() * COLORS.length) | 0] });
+      }
+      if (!raf) raf = requestAnimationFrame(tick);
+    }
+    function tick() {
+      cx.clearRect(0, 0, cv.width, cv.height);
+      var g = 0.32 * dpr, alive = [];
+      bits.forEach(function (b) {
+        b.vy += g; b.vx *= 0.992; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+        if (b.y < cv.height + 40) {
+          alive.push(b);
+          cx.save(); cx.translate(b.x, b.y); cx.rotate(b.r); cx.fillStyle = b.c;
+          cx.scale(1, Math.abs(Math.cos(b.r * 1.7)) * 0.8 + 0.2);
+          cx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); cx.restore();
+        }
+      });
+      bits = alive;
+      raf = bits.length ? requestAnimationFrame(tick) : 0;
+      if (!bits.length) cx.clearRect(0, 0, cv.width, cv.height);
+    }
+    function clearConfetti() { bits = []; }
+
+    /* ---------------- helpers ---------------- */
+    function esc(t) { var d = document.createElement("div"); d.textContent = t == null ? "" : String(t); return d.innerHTML; }
+    function initials(name) { return (name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0]; }).join("").toUpperCase(); }
+    function photoHtml(r) {
+      return r.photo ? '<img src="' + esc(r.photo) + '" alt="' + esc(r.name) + '" />' : '<span class="initials serif gold">' + esc(initials(r.name)) + "</span>";
+    }
+    function badgeHtml(n) { return '<div class="badge serif"><span>' + n + "<small>" + SUFFIX[n] + "</small></span></div>"; }
+    function cancelTyping() { if (typing) { clearTimeout(typing); typing = null; } }
+    function typeInto(el, text, instant) {
+      cancelTyping();
+      if (instant || reduceMotion) { el.textContent = text; return; }
+      var i = 0;
+      (function step() {
+        el.textContent = text.slice(0, ++i);
+        if (i < text.length) typing = setTimeout(step, 85 + Math.random() * 60);
+        else typing = null;
+      })();
+    }
+
+    /* ---------------- views ---------------- */
+    function mount(html, cls) {
+      content.innerHTML = '<div class="view ' + (cls || "") + '">' + html + "</div>";
+      view = content.firstChild; return view;
+    }
+    function renderEmpty() {
+      mount('<div class="trophy">🏆</div><h1 class="title serif gold">Nothing to reveal yet</h1>' +
+        '<p class="tagline empty">Add the top 3 students on <a href="/rank/admin">/rank/admin</a></p>');
+    }
+    function renderIntro() {
+      mount('<div class="trophy">🏆</div><h1 class="title serif gold">' + esc(cfg.title) + "</h1>" +
+        (cfg.subtitle ? '<p class="tagline">' + esc(cfg.subtitle) + "</p>" : "") +
+        '<div class="begin">Click or press → to begin</div>');
+      view.dataset.kind = "intro";
+    }
+    function renderRank(r, revealed, animateTyping) {
+      mount('<h2 class="rank-label serif gold"><span class="typed"></span><i class="caret"></i></h2>' +
+        '<div class="photo-wrap"><div class="flip"><div class="flip-inner">' +
+        '<div class="face front"><span class="q serif gold">?</span></div>' +
+        '<div class="face back">' + photoHtml(r) + "</div></div></div>" + badgeHtml(r.rank) + "</div>" +
+        '<div class="info"><div class="who"><div class="name serif">' + esc(r.name) + "</div>" +
+        (r.subtitle ? '<div class="sub">' + esc(r.subtitle) + "</div>" : "") + "</div>" +
+        '<div class="hint">Click for the reveal</div></div>', revealed ? "revealed" : "");
+      view.dataset.kind = "rank"; view.dataset.rank = String(r.rank);
+      typeInto(view.querySelector(".typed"), LABELS[r.rank], !animateTyping);
+    }
+    function renderFinale() {
+      var shown = steps.filter(function (s) { return s.t === "reveal"; }).map(function (s) { return s.r; })
+        .sort(function (a, b) { return a.rank - b.rank; });
+      var order = [];
+      [2, 1, 3].forEach(function (n) { shown.forEach(function (r) { if (r.rank === n) order.push(r); }); });
+      mount('<h1 class="title serif gold">Congratulations!</h1><div class="podium">' +
+        order.map(function (r) {
+          return '<div class="pod ' + (r.rank === 1 ? "first" : "") + '"><div class="disc"><div class="ring">' + photoHtml(r) + "</div>" + badgeHtml(r.rank) + "</div>" +
+            '<div class="pname serif">' + esc(r.name) + "</div>" + (r.subtitle ? '<div class="psub">' + esc(r.subtitle) + "</div>" : "") + "</div>";
+        }).join("") + "</div>");
+      view.dataset.kind = "finale";
+    }
+
+    /* ---------------- flow ---------------- */
+    function build() {
+      var nums = cfg.order === "desc" ? [3, 2, 1] : [1, 2, 3];
+      var ranks = nums.map(function (n) { return cfg.ranks.filter(function (r) { return r.rank === n; })[0]; })
+        .filter(function (r) { return r && r.name; });
+      steps = [{ t: "intro" }];
+      ranks.forEach(function (r) { steps.push({ t: "rank", r: r }); steps.push({ t: "reveal", r: r }); });
+      if (ranks.length) steps.push({ t: "finale" });
+      dotsEl.innerHTML = steps.map(function () { return "<i></i>"; }).join("");
+    }
+
+    function show(i, dir) {
+      idx = i; var s = steps[i];
+      cancelTyping();
+      if (s.t === "intro") {
+        clearConfetti(); renderIntro(); stopSuspense(600); stopFanfare();
+      } else if (s.t === "rank") {
+        clearConfetti(); renderRank(s.r, false, dir > 0); startSuspense(); stopFanfare();
+      } else if (s.t === "reveal") {
+        stopSuspense(500);
+        var same = view && view.dataset.kind === "rank" && view.dataset.rank === String(s.r.rank) && !view.classList.contains("revealed");
+        if (dir > 0 && same) {
+          view.classList.add("revealed");
+          playFanfare(); setTimeout(burst, 650);
+        } else {
+          renderRank(s.r, true, false);
+          if (dir > 0) { playFanfare(); setTimeout(burst, 650); }
+        }
+      } else if (s.t === "finale") {
+        stopSuspense(500); renderFinale(); if (dir > 0) setTimeout(burst, 300);
+      }
+      updateHud();
+    }
+
+    function updateHud() {
+      var s = steps[idx], last = idx === steps.length - 1;
+      var label = s.t === "intro" ? "Begin ▶" : s.t === "rank" ? "Reveal ▶" : last ? "Restart ↺" : "Next ▶";
+      if (steps.length === 1) label = "Setup ⚙";
+      nextBtn.textContent = label;
+      backBtn.disabled = idx === 0;
+      Array.prototype.forEach.call(dotsEl.children, function (d, k) { d.className = k <= idx ? "on" : ""; });
+    }
+
+    function next() {
+      var now = Date.now(); if (now - lastNav < 350) return; lastNav = now;
+      if (steps.length === 1) { location.href = "/rank/admin"; return; }
+      if (idx >= steps.length - 1) { show(0, -1); return; }
+      show(idx + 1, 1);
+    }
+    function back() {
+      var now = Date.now(); if (now - lastNav < 350) return; lastNav = now;
+      if (idx > 0) show(idx - 1, -1);
+    }
+
+    /* ---------------- input ---------------- */
+    stage.addEventListener("click", next);
+    nextBtn.addEventListener("click", function (e) { e.stopPropagation(); next(); });
+    backBtn.addEventListener("click", function (e) { e.stopPropagation(); back(); });
+    $("muteBtn").addEventListener("click", function (e) { e.stopPropagation(); toggleMute(); });
+    $("fsBtn").addEventListener("click", function (e) { e.stopPropagation(); toggleFs(); });
+    hud.addEventListener("click", function (e) { e.stopPropagation(); });
+    tools.addEventListener("click", function (e) { e.stopPropagation(); });
+
+    function toggleMute() {
+      muted = !muted; suspense.muted = fanfare.muted = muted;
+      $("muteBtn").textContent = muted ? "🔇" : "🔊";
+      // A click here is also a fresh chance to start music the browser blocked earlier.
+      if (!muted && wantSuspense && suspense.paused) { suspense.volume = 0; safePlay(suspense); fade(suspense, 0.85, 600); }
+    }
+    function toggleFs() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
+    }
+
+    addEventListener("keydown", function (e) {
+      if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+      var k = e.key;
+      if (k === "ArrowRight" || k === " " || k === "Enter" || k === "PageDown") { e.preventDefault(); next(); }
+      else if (k === "ArrowLeft" || k === "PageUp" || k === "Backspace") { e.preventDefault(); back(); }
+      else if (k === "f" || k === "F") toggleFs();
+      else if (k === "m" || k === "M") toggleMute();
+    });
+
+    var hideTimer = null;
+    function wake() {
+      hud.classList.remove("hide"); tools.classList.remove("hide");
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () { hud.classList.add("hide"); tools.classList.add("hide"); }, 3500);
+    }
+    ["mousemove", "touchstart", "keydown"].forEach(function (ev) { addEventListener(ev, wake, { passive: true }); });
+    wake();
+
+    /* ---------------- start ---------------- */
+    fetch("/api/rank", { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { cfg = data; build(); if (steps.length === 1) { renderEmpty(); updateHud(); } else { show(0, 1); } })
+      .catch(function () { cfg = { title: "Rank Ceremony", subtitle: "", order: "desc", ranks: [] }; build(); renderEmpty(); updateHud(); });
+  })();
+  </script>
+</body>
+</html>

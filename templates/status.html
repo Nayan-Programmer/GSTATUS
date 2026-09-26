@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name or member_id }} ({{ member_id }}) — {{ config.portal_title }}{% endblock %}
+
+{% block body %}
+<main class="status-page">
+  <header class="status-head">
+    <a class="head-brand" href="/">
+      <img src="{{ url_for('static', filename='logo.jpg') }}" alt="School logo" />
+      <span>{{ config.portal_title }}</span>
+    </a>
+    <div class="live-cluster">
+      <span class="live-pill" id="livePill"><span class="dot"></span> LIVE</span>
+      <span class="updated" id="updatedAt">Updated just now</span>
+      <a class="btn-ghost" href="/leaderboard?view=hostel" title="Leaderboard">🏆 Leaderboard</a>
+      <button class="btn-ghost" id="refreshBtn" title="Refresh now">↻ Refresh</button>
+    </div>
+  </header>
+
+  <section class="glass student-card">
+    <div class="status-ring status-{{ student.status_key }}" id="statusRing">
+      {% if student.photo_url %}<img class="status-photo" id="statusPhoto" src="{{ student.photo_url }}" alt="" />{% else %}<span class="status-orb" id="statusOrb"></span>{% endif %}
+    </div>
+
+    <div class="status-label status-{{ student.status_key }}" id="statusLabel">
+      {{ (student.status or "STATUS UNKNOWN") | upper }}
+    </div>
+
+    <h1 class="student-name" id="studentName">{{ student.name or "Student" }}</h1>
+    <p class="student-id">Member ID: <strong>{{ student.member_id }}</strong></p>
+
+    {% if student.fields %}
+    <dl class="field-grid" id="fieldGrid">
+      {% for field in student.fields %}
+      <div class="field">
+        <dt>{{ field.label }}</dt>
+        <dd>{{ field.value }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+    {% endif %}
+
+    {% if student.has_points_column %}
+    <div class="points-block">
+      <span class="points-label">Total Points</span>
+      <span class="points-value" id="pointsValue">⭐ {{ student.total_points }}</span>
+    </div>
+    {% endif %}
+
+    <button class="btn-primary btn-history" id="historyBtn">📜 VIEW HISTORY</button>
+
+    {% if student.extras %}
+    <div class="extras" id="extras">
+      {% for extra in student.extras %}
+      <div class="extra"><span>{{ extra.label }}</span><strong>{{ extra.value }}</strong></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+
+  <p class="toast" id="toast" hidden>✨ New activity added!</p>
+</main>
+
+<div class="drawer-overlay" id="drawerOverlay" hidden></div>
+
+<aside class="drawer" id="drawer" aria-hidden="true" aria-label="Activity history">
+  <div class="drawer-head">
+    <h2>HISTORY</h2>
+    <button class="drawer-close" id="drawerClose" aria-label="Close history">✕</button>
+  </div>
+
+  <div class="drawer-identity">
+    <strong id="drawerName">{{ student.name or "Student" }}</strong>
+    <span>Member ID: {{ student.member_id }}</span>
+  </div>
+
+  <div class="summary-grid" id="summaryGrid">
+    <div class="summary"><span>Total Activities</span><strong id="sumCount">{{ student.activity_count }}</strong></div>
+    <div class="summary"><span>Points Earned</span><strong class="pos" id="sumEarned">{{ student.points_earned }}</strong></div>
+    <div class="summary"><span>Points Deducted</span><strong class="neg" id="sumDeducted">{{ student.points_deducted }}</strong></div>
+    <div class="summary total"><span>Current Total</span><strong id="sumTotal">⭐ {{ student.total_points }}</strong></div>
+  </div>
+
+  <div class="drawer-filters">
+    <select id="filterActivity" aria-label="Filter by activity">
+      <option value="">All Activities</option>
+    </select>
+    <select id="filterRange" aria-label="Filter by date">
+      <option value="all">All Time</option>
+      <option value="today">Today</option>
+      <option value="week">This Week</option>
+      <option value="month">This Month</option>
+    </select>
+    <input type="search" id="filterSearch" placeholder="Search history…" aria-label="Search history" />
+  </div>
+
+  <div class="history-list" id="historyList"></div>
+
+  <div class="drawer-foot">
+    <span>TOTAL</span>
+    <strong id="footTotal">⭐ {{ student.total_points }}</strong>
+  </div>
+</aside>
+{% endblock %}
+
+{% block scripts %}
+<script id="studentData" type="application/json">{{ student | tojson }}</script>
+<script>
+  window.G_STATUS = {
+    memberId: {{ student.member_id | tojson }},
+    refreshSeconds: {{ refresh_seconds }}
+  };
+</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Rank Setup — {{ config.portal_title }}{% endblock %}
+
+{% block body %}
+<main class="landing">
+  <div class="glass card-landing wide rank-admin">
+    <h1 class="brand-title small">Rank Ceremony Setup</h1>
+    <p class="brand-sub">Add the top 3 students and their photos, then open the slideshow and click <strong>Next</strong> to reveal them one by one.</p>
+
+    {% if message %}<div class="notice ok">{{ message }}</div>{% endif %}
+    {% for err in errors %}<div class="notice bad">{{ err }}</div>{% endfor %}
+    {% if not supabase_configured %}<div class="notice bad">Supabase is not configured, so names and photos can't be saved yet. Set <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> (see README) — once set, every server and every visitor will see the same ceremony.</div>{% endif %}
+
+    <form method="post" class="admin-form rank-fill">
+      <input type="hidden" name="action" value="fill" />
+      <label>
+        Fill ranks 1, 2 and 3 straight from the leaderboard
+        <select name="source">
+          <option value="students">Most disciplined students (top 3)</option>
+          <option value="rooms">Room ranking (top 3 rooms)</option>
+          <option value="gstar">GStar — hostel + day school combined (top 3)</option>
+        </select>
+      </label>
+      {% if token_required %}
+      <label>
+        Admin token
+        <input type="password" name="token" placeholder="Admin token" required />
+      </label>
+      {% endif %}
+      <button type="submit" class="btn-ghost">↻ FILL FROM LEADERBOARD</button>
+      <span class="opt">Replaces the names below. Room ranking has no photo. Student picks (Most Disciplined / GStar) automatically get the photo saved for that Member ID in the <a href="/students/admin">student photo library</a>, if there is one.</span>
+    </form>
+
+    <form method="post" enctype="multipart/form-data" class="admin-form">
+      <label>
+        Slideshow title
+        <input type="text" name="title" maxlength="80" value="{{ data.title }}" />
+      </label>
+      <label>
+        Line under the title <span class="opt">(optional)</span>
+        <input type="text" name="subtitle" maxlength="120" value="{{ data.subtitle }}" />
+      </label>
+      <label>
+        Reveal order
+        <select name="order">
+          <option value="desc" {{ 'selected' if data.order == 'desc' else '' }}>Countdown: 3rd → 2nd → 1st, then all three</option>
+          <option value="asc" {{ 'selected' if data.order == 'asc' else '' }}>1st → 2nd → 3rd, then all three</option>
+        </select>
+      </label>
+
+      {% for n in [1, 2, 3] %}
+      {% set slot = data.ranks[n|string] %}
+      <fieldset class="rank-slot">
+        <legend>{{ ['🥇 First','🥈 Second','🥉 Third'][n-1] }} rank</legend>
+        <div class="rank-slot-body">
+          <div class="rank-thumb" id="thumb{{ n }}">
+            {% if photos[n] %}<img src="{{ photos[n] }}" alt="Rank {{ n }} photo" />{% else %}<span>No photo</span>{% endif %}
+          </div>
+          <div class="rank-slot-fields">
+            <label>
+              Student name
+              <input type="text" name="name{{ n }}" maxlength="80" value="{{ slot.name }}" placeholder="e.g. NAYANDEEP PRAJAPATI" />
+            </label>
+            <label>
+              Small line under the name <span class="opt">(optional — class, room, points…)</span>
+              <input type="text" name="subtitle{{ n }}" maxlength="100" value="{{ slot.subtitle }}" placeholder="e.g. VI-AQUA · Room 202" />
+            </label>
+            <label>
+              Photo <span class="opt">(JPG, PNG, WebP or GIF · up to 10 MB)</span>
+              <input type="file" name="photo{{ n }}" accept="image/jpeg,image/png,image/webp,image/gif" data-thumb="thumb{{ n }}" />
+            </label>
+            {% if photos[n] %}
+            <label class="check"><input type="checkbox" name="remove{{ n }}" value="1" /> Remove current photo</label>
+            {% endif %}
+          </div>
+        </div>
+      </fieldset>
+      {% endfor %}
+
+      {% if token_required %}
+      <label>
+        Admin token
+        <input type="password" name="token" placeholder="Admin token" required />
+      </label>
+      {% endif %}
+      <button type="submit" class="btn-primary">SAVE</button>
+    </form>
+
+    <div class="share-help">
+      A rank with no name is skipped. The slideshow needs one click on <strong>Begin</strong> first, because browsers only allow music after a click.
+      Keys: <strong>→ / Space</strong> next · <strong>←</strong> back · <strong>F</strong> fullscreen · <strong>M</strong> mute.
+    </div>
+
+    <a class="btn-primary rank-open" href="/rank" target="_blank" rel="noopener">▶ OPEN SLIDESHOW</a>
+    <a class="btn-ghost back" href="/students/admin">🖼️ Manage the student photo library</a>
+    <a class="btn-ghost back" href="/">← Back to portal</a>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('input[type=file][data-thumb]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      var box = document.getElementById(input.dataset.thumb);
+      if (!file || !box) return;
+      var reader = new FileReader();
+      reader.onload = function (e) { box.innerHTML = '<img alt="Preview" src="' + e.target.result + '" />'; };
+      reader.readAsDataURL(file);
+    });
+  });
+</script>
+{% endblock %}

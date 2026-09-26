@@ -1,0 +1,16 @@
+# Unused Lovable / TanStack scaffold - the portal is the Flask app in app.py
+node_modules
+/src
+/bun.lock
+/bunfig.toml
+/package.json
+/tsconfig.json
+/vite.config.ts
+/eslint.config.js
+/components.json
+/.prettierrc
+/.prettierignore
+/AGENTS.md
+/render.yaml
+.venv
+__pycache__

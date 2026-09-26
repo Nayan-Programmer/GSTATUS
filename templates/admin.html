@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Setup — {{ config.portal_title }}{% endblock %}
+
+{% block body %}
+<main class="landing">
+  <div class="glass card-landing wide">
+    <h1 class="brand-title small">Portal Setup</h1>
+    <p class="brand-sub">Connect the Google Form's responses spreadsheet. Read-only — no Google password is ever needed.</p>
+
+    {% if read_only %}<div class="notice bad">Running on Vercel: settings come from Environment Variables (GOOGLE_SHEET_URL, STUDENT_MASTER_URL, …), so this page is view-only and just shows what was detected.</div>{% endif %}
+    {% if message %}<div class="notice ok">{{ message }}</div>{% endif %}
+    {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+    {% if master_error %}<div class="notice bad">{{ master_error }}</div>{% endif %}
+
+    <form method="post" class="admin-form">
+      <label>
+        Google Sheet link
+        <input type="text" name="sheet_url" value="{{ config.sheet_url }}"
+               placeholder="https://docs.google.com/spreadsheets/d/SHEET_ID/edit" required />
+      </label>
+      <label>
+        Sheet tab name <span class="opt">(optional)</span>
+        <input type="text" name="sheet_name" value="{{ config.sheet_name }}" placeholder="Form Responses 1" />
+      </label>
+      <label>
+        Student Master sheet link <span class="opt">(optional — the full student roll)</span>
+        <input type="text" name="master_url" value="{{ config.master_url }}"
+               placeholder="https://docs.google.com/spreadsheets/d/MASTER_SHEET_ID/edit" />
+      </label>
+      <label>
+        Student Master tab name <span class="opt">(optional)</span>
+        <input type="text" name="master_tab" value="{{ config.master_tab }}" placeholder="Sheet1" />
+      </label>
+      <label>
+        Status: <strong>Good</strong> when total points are at least
+        <input type="number" step="any" name="good_min" value="{{ config.good_min|int if config.good_min == config.good_min|int else config.good_min }}" />
+      </label>
+      <label>
+        Status: <strong>Average</strong> when total points are at least (below this = <strong>Bad</strong>)
+        <input type="number" step="any" name="average_min" value="{{ config.average_min|int if config.average_min == config.average_min|int else config.average_min }}" />
+      </label>
+      <label>
+        Auto-refresh seconds
+        <input type="number" name="refresh_seconds" min="10" max="120" value="{{ config.refresh_seconds }}" />
+      </label>
+      {% if token_required %}
+      <label>
+        Admin token
+        <input type="password" name="token" placeholder="Admin token" required />
+      </label>
+      {% endif %}
+      <button type="submit" class="btn-primary" {{ 'disabled' if read_only else '' }}>SAVE &amp; TEST</button>
+    </form>
+
+    <div class="share-help">
+      In Google Sheets: <strong>Share → General access → Anyone with the link → Viewer</strong>
+      (or <strong>File → Share → Publish to web</strong>).
+    </div>
+
+    {% if detected %}
+    <div class="detected">
+      <h3>Detected columns · {{ detected.rows }} activity records</h3>
+      {% if detected.skipped %}<p class="brand-sub">{{ detected.skipped }} sheet rows could not be matched to a student and were skipped.</p>{% endif %}
+      <ul>
+        {% for field, header in detected.columns.items() %}
+        <li><span>{{ field }}</span><strong>{{ header }}</strong></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if detected_master %}
+    <div class="detected">
+      <h3>Student Master · {{ detected_master.students }} students</h3>
+      <ul>
+        <li><span>marked (have records)</span><strong>{{ detected_master.marked }}</strong></li>
+        <li><span>not marked (show 0)</span><strong>{{ detected_master.unmarked }}</strong></li>
+        {% if detected_master.not_in_master %}
+        <li><span>in responses but not in master</span><strong>{{ detected_master.not_in_master }}</strong></li>
+        {% endif %}
+        {% for field, header in detected_master.columns.items() %}
+        <li><span>{{ field }}</span><strong>{{ header }}</strong></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="share-help">
+      Photos (rank ceremony + the <a href="/students/admin">student photo library</a>) are stored in
+      Supabase, separate from this Google Sheet setup — see the README for how to connect it.
+    </div>
+
+    <a class="btn-ghost back" href="/">← Back to portal</a>
+  </div>
+</main>
+{% endblock %}

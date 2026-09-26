@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — {{ config.portal_title }}{% endblock %}
+
+{% block head %}{% if view not in ('hostel', 'day', 'gstar', 'weekly') %}<meta http-equiv="refresh" content="{{ refresh_seconds * 3 }}" />{% endif %}{% endblock %}
+
+{% block body %}
+<main class="status-page lb-page">
+  <header class="status-head">
+    <a class="head-brand" href="/">
+      <img src="{{ url_for('static', filename='logo.jpg') }}" alt="School logo" />
+      <span>{{ config.portal_title }}</span>
+    </a>
+    <div class="live-cluster">
+      <span class="live-pill"><span class="dot"></span> LIVE</span>
+      <a class="btn-ghost" href="/">🪪 My Status</a>
+    </div>
+  </header>
+
+  {% if master_error %}<div class="notice bad">{{ master_error }}</div>{% endif %}
+
+  <nav class="lb-tabs" aria-label="Leaderboard views">
+    <a class="{{ 'on' if view == 'rank' else '' }}" href="/leaderboard">🏆 Rankings</a>
+    <a class="{{ 'on' if view == 'hostel' else '' }}" href="/leaderboard?view=hostel">🏠 Hostel</a>
+    <a class="{{ 'on' if view == 'day' else '' }}" href="/leaderboard?view=day">🏫 Day School</a>
+    <a class="{{ 'on' if view == 'gstar' else '' }}" href="/leaderboard?view=gstar">🌟 GStar</a>
+    <a class="{{ 'on' if view == 'weekly' else '' }}" href="/leaderboard?view=weekly">📅 Weekly</a>
+    <a href="/rank" target="_blank" rel="noopener">🎬 Rank Ceremony</a>
+  </nav>
+
+  {% if view == 'hostel' %}
+  <section class="glass lb-card">
+    <div class="lb-title">
+      <h2>🏠 All Hostel Students</h2>
+      <span class="lb-count" id="hCount">{{ board.hostel|length }} students</span>
+    </div>
+    <p class="lb-note">Tap a name to open that student's status page.</p>
+
+    {% if board.hostel %}
+    <div class="hl-controls">
+      <input type="search" id="hSearch" placeholder="Search name or Member ID…" aria-label="Search students" autocomplete="off" />
+      <select id="hRoom" aria-label="Filter by room">
+        <option value="">All rooms</option>
+        {% for room in board.hostel_rooms %}<option value="{{ room }}">Room {{ room }}</option>{% endfor %}
+      </select>
+      <select id="hStatus" aria-label="Filter by status">
+        <option value="">All status</option>
+        {% for label in board.hostel_statuses %}<option value="{{ label }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select id="hSort" aria-label="Sort students">
+        <option value="name">Name A–Z</option>
+        <option value="high">Points: high → low</option>
+        <option value="low">Points: low → high</option>
+        <option value="room">Room</option>
+      </select>
+    </div>
+
+    <div class="lb-scroll">
+      <table class="lb-table hl-table">
+        <thead><tr><th>Student</th><th>Room</th><th>Status</th><th>Points</th></tr></thead>
+        <tbody id="hBody">
+          {% for st in board.hostel %}
+          <tr data-name="{{ (st.name or st.member_id)|lower }}" data-id="{{ st.member_id|lower }}"
+              data-room="{{ st.room }}" data-status="{{ st.status }}" data-points="{{ st.total }}"
+              data-order="{{ loop.index0 }}">
+            <td>
+              <a href="{{ url_for('student_page', member_id=st.member_id) }}"><strong>{{ st.name or st.member_id }}</strong></a>
+              <span class="lb-id">{{ st.member_id }}{% if st['class'] %} · {{ st['class'] }}{% endif %}</span>
+            </td>
+            <td>{{ st.room or '—' }}</td>
+            <td><span class="st-pill st-{{ st.status_key }}">{{ st.status }}</span></td>
+            <td class="{{ 'pos' if st.total > 0 else ('neg' if st.total < 0 else '') }}">
+              <strong>⭐ {{ st.total_label }}</strong>
+              {% if not st.entries %}<span class="lb-id">Not marked yet</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="hEmpty" hidden><td colspan="4" class="empty-history">No student matches your search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty-history">No hostel students found yet. Connect the Student Master sheet (with a Hostel / Day School column or Room No) so every hostel student is listed.</p>
+    {% endif %}
+  </section>
+
+  {% elif view == 'day' %}
+  <section class="glass lb-card">
+    <div class="lb-title">
+      <h2>🏫 All Day School Students</h2>
+      <span class="lb-count" id="dCount">{{ board.day|length }} students</span>
+    </div>
+    <p class="lb-note">Tap a name to open that student's status page.</p>
+
+    {% if board.day %}
+    <div class="hl-controls">
+      <input type="search" id="dSearch" placeholder="Search name or Member ID…" aria-label="Search students" autocomplete="off" />
+      <select id="dClass" aria-label="Filter by class">
+        <option value="">All classes</option>
+        {% for cls in board.day_classes %}<option value="{{ cls }}">{{ cls }}</option>{% endfor %}
+      </select>
+      <select id="dStatus" aria-label="Filter by status">
+        <option value="">All status</option>
+        {% for label in board.day_statuses %}<option value="{{ label }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select id="dSort" aria-label="Sort students">
+        <option value="name">Name A–Z</option>
+        <option value="high">Points: high → low</option>
+        <option value="low">Points: low → high</option>
+      </select>
+    </div>
+
+    <div class="lb-scroll">
+      <table class="lb-table hl-table">
+        <thead><tr><th>Student</th><th>Class</th><th>Status</th><th>Points</th></tr></thead>
+        <tbody id="dBody">
+          {% for st in board.day %}
+          <tr data-name="{{ (st.name or st.member_id)|lower }}" data-id="{{ st.member_id|lower }}"
+              data-class="{{ st['class'] }}" data-status="{{ st.status }}" data-points="{{ st.total }}"
+              data-order="{{ loop.index0 }}">
+            <td>
+              <a href="{{ url_for('student_page', member_id=st.member_id) }}"><strong>{{ st.name or st.member_id }}</strong></a>
+              <span class="lb-id">{{ st.member_id }}</span>
+            </td>
+            <td>{{ st['class'] or '—' }}</td>
+            <td><span class="st-pill st-{{ st.status_key }}">{{ st.status }}</span></td>
+            <td class="{{ 'pos' if st.total > 0 else ('neg' if st.total < 0 else '') }}">
+              <strong>⭐ {{ st.total_label }}</strong>
+              {% if not st.entries %}<span class="lb-id">Not marked yet</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="dEmpty" hidden><td colspan="4" class="empty-history">No student matches your search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty-history">No day school students found yet. Connect the Student Master sheet (with a Hostel / Day School column) so every day scholar is listed.</p>
+    {% endif %}
+  </section>
+
+  {% elif view == 'gstar' %}
+  <section class="glass lb-card">
+    <div class="lb-title">
+      <h2>🌟 GStar — Combined Ranking</h2>
+      <span class="lb-count" id="gCount">{{ board.gstar|length }} students</span>
+    </div>
+    <p class="lb-note">
+      Hostel and day school students ranked together by total points. The top 3 here can be used to
+      fill a separate <a href="/rank/admin">rank ceremony</a> (choose "GStar" as the source).
+    </p>
+
+    {% if board.gstar %}
+    <div class="hl-controls">
+      <input type="search" id="gSearch" placeholder="Search name or Member ID…" aria-label="Search students" autocomplete="off" />
+      <select id="gType" aria-label="Filter by type">
+        <option value="">Hostel + Day School</option>
+        <option value="1">Hostel only</option>
+        <option value="0">Day School only</option>
+      </select>
+      <select id="gSort" aria-label="Sort students">
+        <option value="high">Points: high → low</option>
+        <option value="low">Points: low → high</option>
+        <option value="name">Name A–Z</option>
+      </select>
+    </div>
+
+    <div class="lb-scroll">
+      <table class="lb-table gstar-table">
+        <thead><tr><th>#</th><th>Student</th><th>Type</th><th>Points</th></tr></thead>
+        <tbody id="gBody">
+          {% for st in board.gstar %}
+          <tr class="{{ 'top' if st.rank <= 3 else '' }}"
+              data-name="{{ (st.name or st.member_id)|lower }}" data-id="{{ st.member_id|lower }}"
+              data-hostel="{{ 1 if st.is_hostel else 0 }}" data-points="{{ st.total }}"
+              data-order="{{ loop.index0 }}">
+            <td class="rank">{% if st.rank == 1 %}🥇{% elif st.rank == 2 %}🥈{% elif st.rank == 3 %}🥉{% else %}{{ st.rank }}{% endif %}</td>
+            <td>
+              <span class="gstar-who">
+                {% if st.photo_url %}<img class="gstar-avatar" src="{{ st.photo_url }}" alt="" />{% endif %}
+                <span>
+                  <a href="{{ url_for('student_page', member_id=st.member_id) }}"><strong>{{ st.name or st.member_id }}</strong></a>
+                  <span class="lb-id">{{ st.member_id }}{% if st['class'] %} · {{ st['class'] }}{% endif %}</span>
+                </span>
+              </span>
+            </td>
+            <td>{{ '🏠 Hostel' if st.is_hostel else '🏫 Day School' }}</td>
+            <td class="{{ 'pos' if st.total > 0 else ('neg' if st.total < 0 else '') }}"><strong>⭐ {{ st.total_label }}</strong></td>
+          </tr>
+          {% endfor %}
+          <tr id="gEmpty" hidden><td colspan="4" class="empty-history">No student matches your search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty-history">No marked students yet — GStar only ranks students who already have at least one activity recorded.</p>
+    {% endif %}
+  </section>
+
+  {% elif view == 'weekly' %}
+  <section class="glass lb-card">
+    <div class="lb-title">
+      <h2>📅 Weekly Report <span class="lb-week">{{ board.week_label }}</span></h2>
+      <span class="lb-count" id="wCount">{{ board.weekly|length }} students</span>
+    </div>
+    <p class="lb-note">
+      Every hostel and day school student, ranked by points earned <strong>this week only</strong>
+      (Monday–Sunday) — 0 if nobody has marked them yet this week. Resets automatically every
+      Monday and never affects the totals on the other tabs, which stay all-time.
+    </p>
+
+    {% if board.weekly %}
+    <div class="hl-controls">
+      <input type="search" id="wSearch" placeholder="Search name or Member ID…" aria-label="Search students" autocomplete="off" />
+      <select id="wType" aria-label="Filter by type">
+        <option value="">Hostel + Day School</option>
+        <option value="1">Hostel only</option>
+        <option value="0">Day School only</option>
+      </select>
+      <select id="wSort" aria-label="Sort students">
+        <option value="high">Points: high → low</option>
+        <option value="low">Points: low → high</option>
+        <option value="name">Name A–Z</option>
+      </select>
+    </div>
+
+    <div class="lb-scroll">
+      <table class="lb-table gstar-table">
+        <thead><tr><th>#</th><th>Student</th><th>Type</th><th>This week</th></tr></thead>
+        <tbody id="wBody">
+          {% for st in board.weekly %}
+          <tr class="{{ 'top' if st.rank <= 3 else '' }}"
+              data-name="{{ (st.name or st.member_id)|lower }}" data-id="{{ st.member_id|lower }}"
+              data-hostel="{{ 1 if st.is_hostel else 0 }}" data-points="{{ st.total }}"
+              data-order="{{ loop.index0 }}">
+            <td class="rank">{% if st.rank == 1 %}🥇{% elif st.rank == 2 %}🥈{% elif st.rank == 3 %}🥉{% else %}{{ st.rank }}{% endif %}</td>
+            <td>
+              <span class="gstar-who">
+                {% if st.photo_url %}<img class="gstar-avatar" src="{{ st.photo_url }}" alt="" />{% endif %}
+                <span>
+                  <a href="{{ url_for('student_page', member_id=st.member_id) }}"><strong>{{ st.name or st.member_id }}</strong></a>
+                  <span class="lb-id">{{ st.member_id }}{% if st['class'] %} · {{ st['class'] }}{% endif %}</span>
+                </span>
+              </span>
+            </td>
+            <td>{{ '🏠 Hostel' if st.is_hostel else '🏫 Day School' }}</td>
+            <td class="{{ 'pos' if st.total > 0 else ('neg' if st.total < 0 else '') }}">
+              <strong>⭐ {{ st.total_label }}</strong>
+              {% if not st.entries %}<span class="lb-id">Not marked this week</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="wEmpty" hidden><td colspan="4" class="empty-history">No student matches your search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty-history">No students found yet. Connect the Student Master sheet (see /admin) so every student is listed here.</p>
+    {% endif %}
+  </section>
+
+  {% else %}
+  <section class="glass lb-card">
+    <div class="lb-title">
+      <h2>🏠 Room Ranking</h2>
+      <div class="lb-switch">
+        <a class="{{ 'on' if board.by == 'avg' else '' }}" href="/leaderboard?rank=avg">Per student</a>
+        <a class="{{ 'on' if board.by == 'total' else '' }}" href="/leaderboard?rank=total">Total points</a>
+      </div>
+    </div>
+    <p class="lb-note">
+      Points of every student in the room, adding rewards and subtracting deductions.
+      {% if board.by == 'avg' %}Ranked by average per student, so bigger rooms are not favoured.{% else %}Ranked by total room points.{% endif %}
+    </p>
+
+    {% if board.rooms %}
+    <div class="lb-scroll">
+      <table class="lb-table">
+        <thead>
+          <tr><th>#</th><th>Room</th><th>Students</th><th>Earned</th><th>Deducted</th><th>Total</th><th>Avg / student</th></tr>
+        </thead>
+        <tbody>
+          {% for r in board.rooms %}
+          <tr class="{{ 'top' if r.rank == 1 else '' }}">
+            <td class="rank">{% if r.rank == 1 %}🥇{% elif r.rank == 2 %}🥈{% elif r.rank == 3 %}🥉{% else %}{{ r.rank }}{% endif %}</td>
+            <td><strong>Room {{ r.room }}</strong></td>
+            <td>{{ r.students }}</td>
+            <td class="pos">{{ r.earned_label }}</td>
+            <td class="neg">{{ r.deducted_label }}</td>
+            <td><strong>⭐ {{ r.total_label }}</strong></td>
+            <td>{{ r.average_label }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not has_room_data %}
+    <p class="lb-note">Room and student counts only include students who already have a record. Add <strong>Room No</strong> and <strong>Cupboard No</strong> columns to the Student Master for exact room sizes and fair per-student averages.</p>
+    {% endif %}
+    {% else %}
+    <p class="empty-history">No room data yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="glass lb-card">
+    <div class="lb-title">
+      <h2>🌟 Most Disciplined</h2>
+    </div>
+    <p class="lb-note">
+      Students who have earned points and <strong>never</strong> received a deduction.
+      {{ board.clean_count }} of {{ board.student_count }} students.
+    </p>
+
+    {% if board.disciplined %}
+    <div class="lb-scroll">
+      <table class="lb-table">
+        <thead><tr><th>#</th><th>Student</th><th>Class</th><th>Room</th><th>Records</th><th>Points</th></tr></thead>
+        <tbody>
+          {% for st in board.disciplined[:limit] %}
+          <tr>
+            <td class="rank">{% if st.rank == 1 %}🥇{% elif st.rank == 2 %}🥈{% elif st.rank == 3 %}🥉{% else %}{{ st.rank }}{% endif %}</td>
+            <td><a href="/{{ st.member_id }}"><strong>{{ st.name or st.member_id }}</strong></a><span class="lb-id">{{ st.member_id }}</span></td>
+            <td>{{ st['class'] or '—' }}</td>
+            <td>{{ st.room or '—' }}</td>
+            <td>{{ st.pos_n }}</td>
+            <td class="pos"><strong>⭐ {{ st.total_label }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if board.disciplined|length > limit %}
+    <a class="btn-ghost back" href="/leaderboard?rank={{ board.by }}&limit={{ limit + 25 }}">Show more</a>
+    {% endif %}
+    {% else %}
+    <p class="empty-history">Nobody has a purely positive record yet.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+{% if view in ('hostel', 'day', 'gstar', 'weekly') %}
+<script>
+  // Shared filter/sort behaviour for the Hostel, Day School and GStar tables.
+  // Each table supplies its own set of controls; missing controls are skipped.
+  function wireRoster(opts) {
+    var body = document.getElementById(opts.body);
+    if (!body) return;
+    var rows = Array.prototype.slice.call(body.querySelectorAll("tr[data-order]"));
+    var empty = document.getElementById(opts.empty);
+    var count = document.getElementById(opts.count);
+    var search = document.getElementById(opts.search);
+    var extra = opts.extra ? document.getElementById(opts.extra) : null;
+    var status = opts.status ? document.getElementById(opts.status) : null;
+    var sort = document.getElementById(opts.sort);
+
+    function num(row, key) { return parseFloat(row.dataset[key]) || 0; }
+    function extraNum(row) { var n = parseInt(row.dataset[opts.extraKey], 10); return isNaN(n) ? 1e9 : n; }
+
+    var sorters = {
+      name: function (a, b) { return num(a, "order") - num(b, "order"); },
+      high: function (a, b) { return num(b, "points") - num(a, "points") || num(a, "order") - num(b, "order"); },
+      low: function (a, b) { return num(a, "points") - num(b, "points") || num(a, "order") - num(b, "order"); },
+      room: function (a, b) { return extraNum(a) - extraNum(b) || num(a, "order") - num(b, "order"); }
+    };
+
+    function apply() {
+      var q = search.value.trim().toLowerCase();
+      var shown = 0;
+      rows.sort(sorters[sort.value] || sorters.name).forEach(function (row) {
+        var ok = (!q || row.dataset.name.indexOf(q) !== -1 || row.dataset.id.indexOf(q) !== -1) &&
+                 (!extra || !extra.value || row.dataset[opts.extraKey] === extra.value) &&
+                 (!status || !status.value || row.dataset.status === status.value);
+        row.hidden = !ok;
+        if (ok) {
+          shown++;
+          if (opts.rank) {
+            var cell = row.querySelector(".rank");
+            if (cell) cell.textContent = shown === 1 ? "🥇" : shown === 2 ? "🥈" : shown === 3 ? "🥉" : String(shown);
+            row.classList.toggle("top", shown <= 3);
+          }
+        } else if (opts.rank) {
+          row.classList.remove("top");
+        }
+        body.insertBefore(row, empty);
+      });
+      if (empty) empty.hidden = shown !== 0;
+      if (count) count.textContent = (shown === rows.length ? rows.length : shown + " of " + rows.length) + " students";
+    }
+
+    [search, extra, status, sort].forEach(function (el) {
+      if (el) el.addEventListener(el === search ? "input" : "change", apply);
+    });
+  }
+
+  {% if view == 'hostel' and board.hostel %}
+  wireRoster({ body: "hBody", empty: "hEmpty", count: "hCount", search: "hSearch", extra: "hRoom", extraKey: "room", status: "hStatus", sort: "hSort" });
+  {% endif %}
+  {% if view == 'day' and board.day %}
+  wireRoster({ body: "dBody", empty: "dEmpty", count: "dCount", search: "dSearch", extra: "dClass", extraKey: "class", status: "dStatus", sort: "dSort" });
+  {% endif %}
+  {% if view == 'gstar' and board.gstar %}
+  wireRoster({ body: "gBody", empty: "gEmpty", count: "gCount", search: "gSearch", extra: "gType", extraKey: "hostel", sort: "gSort", rank: true });
+  {% endif %}
+  {% if view == 'weekly' and board.weekly %}
+  wireRoster({ body: "wBody", empty: "wEmpty", count: "wCount", search: "wSearch", extra: "wType", extraKey: "hostel", sort: "wSort", rank: true });
+  {% endif %}
+</script>
+{% endif %}
+{% endblock %}
