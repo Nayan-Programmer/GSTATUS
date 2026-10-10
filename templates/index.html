@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block body %}
+<main class="landing">
+  <div class="glass card-landing">
+    <img class="brand-mark" src="{{ url_for('static', filename='logo.jpg') }}" alt="Shree Swaminarayan Gurukul International School" />
+
+    <h1 class="brand-title">{{ config.portal_title }}</h1>
+    <p class="brand-sub">{{ config.portal_subtitle }}</p>
+
+    <form class="search-form" method="get" action="/" id="searchForm" autocomplete="off">
+      <div class="input-wrap">
+        <span class="input-icon">🪪</span>
+        <input
+          type="text"
+          id="memberId"
+          name="memberId"
+          placeholder="Enter Member ID (e.g. G001)"
+          aria-label="Member ID"
+          required
+        />
+      </div>
+      <button type="submit" class="btn-primary">SEARCH</button>
+      <p class="form-error" id="formError" hidden>Please enter a valid Member ID.</p>
+    </form>
+
+    <div class="secure-note">
+      <span class="dot"></span> Secure student portal · read-only
+    </div>
+
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById("searchForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var field = document.getElementById("memberId");
+    var error = document.getElementById("formError");
+    var value = (field.value || "").replace(/\s+/g, "").toUpperCase();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._\/-]{0,31}$/.test(value)) {
+      error.hidden = false;
+      field.focus();
+      return;
+    }
+    error.hidden = true;
+    window.location.href = "/" + encodeURIComponent(value);
+  });
+</script>
+{% endblock %}

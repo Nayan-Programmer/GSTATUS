@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: gstatus
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: GOOGLE_SHEET_URL
+        sync: false
+      - key: GOOGLE_SHEET_NAME
+        sync: false
+      - key: STUDENT_MASTER_URL
+        sync: false
+      - key: STUDENT_MASTER_NAME
+        sync: false
+      - key: REFRESH_SECONDS
+        value: 20
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: gstatus

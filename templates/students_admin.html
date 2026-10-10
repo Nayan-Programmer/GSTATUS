@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Student Photos — {{ config.portal_title }}{% endblock %}
+
+{% block body %}
+<main class="landing">
+  <div class="glass card-landing wide rank-admin">
+    <h1 class="brand-title small">Student Photo Library</h1>
+    <p class="brand-sub">
+      Upload one photo per Member ID, once. The rank ceremony's "Fill from leaderboard" button
+      automatically picks up the right photo for whichever students land in the top 3 — no more
+      re-uploading a photo before every ceremony.
+    </p>
+
+    {% if message %}<div class="notice ok">{{ message }}</div>{% endif %}
+    {% for err in errors %}<div class="notice bad">{{ err }}</div>{% endfor %}
+    {% if not supabase_configured %}<div class="notice bad">Supabase is not configured, so photos can't be saved yet. Set <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> (see README).</div>{% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="admin-form">
+      <label>
+        Member ID
+        <input type="text" name="member_id" placeholder="e.g. G001" required maxlength="32" />
+      </label>
+      <label>
+        Photo <span class="opt">(JPG, PNG, WebP or GIF · up to 10 MB)</span>
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/gif" />
+      </label>
+      {% if token_required %}
+      <label>
+        Admin token
+        <input type="password" name="token" placeholder="Admin token" required />
+      </label>
+      {% endif %}
+      <button type="submit" class="btn-primary">SAVE PHOTO</button>
+    </form>
+
+    {% if photos %}
+    <div class="detected">
+      <h3>{{ photos|length }} photo(s) saved</h3>
+      <div class="student-photo-grid">
+        {% for p in photos %}
+        <div class="student-photo-card">
+          <img src="{{ p.url }}" alt="{{ p.member_id }}" />
+          <strong>{{ p.member_id }}</strong>
+          <form method="post" class="student-photo-remove">
+            <input type="hidden" name="member_id" value="{{ p.member_id }}" />
+            <input type="hidden" name="action" value="remove" />
+            {% if token_required %}<input type="hidden" name="token" value="" class="needs-token" />{% endif %}
+            <button type="submit" class="btn-ghost">Remove</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="empty-history">No photos saved yet.</p>
+    {% endif %}
+
+    <div class="share-help">
+      A saved photo is reused automatically by <a href="/rank/admin">Rank Ceremony setup</a> whenever
+      that Member ID is picked from "Most Disciplined" or "GStar". Uploading again for the same
+      Member ID replaces the old photo everywhere it's used.
+    </div>
+
+    <a class="btn-ghost back" href="/rank/admin">← Back to rank ceremony setup</a>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{% if token_required %}
+<script>
+  // The remove buttons are tiny per-row forms without their own token field in the UI;
+  // ask once and stamp it into every remove form so removal still respects the admin token.
+  document.querySelectorAll(".student-photo-remove").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      var field = form.querySelector(".needs-token");
+      if (field && !field.value) {
+        var token = window.prompt("Admin token");
+        if (!token) { e.preventDefault(); return; }
+        field.value = token;
+      }
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}
