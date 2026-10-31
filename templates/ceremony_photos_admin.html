@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Room Ceremony' if kind == 'rooms' else 'GStar Ceremony' }} Photos — {{ config.portal_title }}{% endblock %}
+
+{% block body %}
+<main class="landing">
+  <div class="glass card-landing wide rank-admin">
+    {% if kind == 'rooms' %}
+    <h1 class="brand-title small">Room Ceremony · Photos</h1>
+    <p class="brand-sub">
+      Everyone who will appear in the <a href="/rank/rooms">room ceremony</a> right now: a photo for each room
+      (a group photo works well) and for each room's 1st, 2nd and 3rd students. Choose the photos you want and press
+      <strong>SAVE PHOTOS</strong> once.
+    </p>
+    {% else %}
+    <h1 class="brand-title small">{{ data.title or 'GStar Top 10' }} · Photos</h1>
+    <p class="brand-sub">
+      The students who will appear in the <a href="/rank/gstar{{ '?' ~ query if query else '' }}">GStar ceremony</a> right now.
+      Choose the photos you want and press <strong>SAVE PHOTOS</strong> once.
+    </p>
+    <div class="lb-switch photo-admin-switch">
+      <a class="{{ 'on' if data.source != 'weekly' else '' }}" href="/rank/gstar/admin">GStar Top 10 (all-time)</a>
+      <a class="{{ 'on' if data.source == 'weekly' else '' }}" href="/rank/gstar/admin?source=weekly">Weekly Top 10</a>
+    </div>
+    {% endif %}
+
+    {% if message %}<div class="notice ok">{{ message }}</div>{% endif %}
+    {% for err in errors %}<div class="notice bad">{{ err }}</div>{% endfor %}
+
+    {% if rows %}
+    <form method="post" enctype="multipart/form-data" class="admin-form photo-admin" id="photoForm">
+      <input type="hidden" name="count" value="{{ rows|length }}" />
+      {% set ns = namespace(group=None) %}
+      {% for row in rows %}
+        {% if row.group and row.group != ns.group %}
+          {% set ns.group = row.group %}
+          <h3 class="photo-admin-group">{{ row.group }}</h3>
+        {% endif %}
+        <div class="photo-row {{ 'is-room' if row.kind == 'room' else '' }}">
+          <input type="hidden" name="key_{{ loop.index0 }}" value="{{ row.key }}" />
+          <input type="hidden" name="label_{{ loop.index0 }}" value="{{ row.title }}" />
+          <div class="rank-thumb photo-thumb" id="thumb_{{ loop.index0 }}">
+            {% if row.photo %}<img src="{{ row.photo }}" alt="" />{% else %}<span>{{ 'No room photo' if row.kind == 'room' else 'No photo' }}</span>{% endif %}
+          </div>
+          <div class="photo-row-text">
+            <strong>{{ row.title }}</strong>
+            <span class="opt">{{ row.sub }}</span>
+            <input type="file" name="photo_{{ loop.index0 }}" data-thumb="thumb_{{ loop.index0 }}"
+                   accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Photo for {{ row.title }}" />
+            {% if row.photo %}
+            <label class="check"><input type="checkbox" name="remove_{{ loop.index0 }}" value="1" /> Remove this photo</label>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if token_required %}
+      <label>
+        Admin token
+        <input type="password" name="token" placeholder="Admin token" required />
+      </label>
+      {% endif %}
+      <button type="submit" class="btn-primary" {{ 'disabled' if not supabase_configured else '' }}>SAVE PHOTOS</button>
+      <span class="opt">JPG, PNG, WebP or GIF · up to 10 MB each · about 30 MB in one save</span>
+    </form>
+    {% elif not errors %}
+    <p class="empty-history">
+      {% if kind == 'rooms' %}No rooms on the leaderboard yet.{% else %}No student on this leaderboard has earned points yet.{% endif %}
+    </p>
+    {% endif %}
+
+    <div class="share-help">
+      Student photos are saved in the <a href="/students/admin">student photo library</a>, so they also show on GStar,
+      the student's own page and every other ceremony. The list follows the live leaderboard: if the ranking changes,
+      reload this page to see who is in it now.
+    </div>
+
+    <a class="btn-primary rank-open" href="{{ '/rank/rooms' if kind == 'rooms' else '/rank/gstar' ~ ('?' ~ query if query else '') }}" target="_blank" rel="noopener">▶ OPEN CEREMONY</a>
+    <a class="btn-ghost back" href="/leaderboard">← Back to leaderboard</a>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Show the chosen photo straight away, before saving.
+  document.querySelectorAll('.photo-admin input[type=file]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var thumb = document.getElementById(input.dataset.thumb), file = input.files && input.files[0];
+      if (!thumb || !file) return;
+      var img = document.createElement('img'); img.alt = '';
+      img.src = URL.createObjectURL(file);
+      thumb.innerHTML = ''; thumb.appendChild(img);
+    });
+  });
+  // Large batches: warn before the server rejects the whole save.
+  var form = document.getElementById('photoForm');
+  if (form) form.addEventListener('submit', function (e) {
+    var total = 0;
+    form.querySelectorAll('input[type=file]').forEach(function (i) { if (i.files[0]) total += i.files[0].size; });
+    if (total > 38 * 1024 * 1024) {
+      e.preventDefault();
+      alert('These photos add up to more than 38 MB. Save them in two smaller batches.');
+    }
+  });
+</script>
+{% endblock %}
