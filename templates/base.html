@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ config.portal_title }} — {{ config.portal_subtitle }}{% endblock %}</title>
+    <meta name="description" content="{{ config.portal_title }} — secure student status portal for Shree Swaminarayan Gurukul International School, Gurugram." />
+    <link rel="icon" href="{{ url_for('static', filename='logo.jpg') }}" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <div class="aurora"></div>
+    {% block body %}{% endblock %}
+    <footer class="site-footer">
+      <img src="{{ url_for('static', filename='logo.jpg') }}" alt="School logo" />
+      <span>Shree Swaminarayan Gurukul International School · Gurugram</span>
+    </footer>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
